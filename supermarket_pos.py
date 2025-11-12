@@ -2430,36 +2430,108 @@ def show_error(parent, message: str) -> None:
 def show_info(parent, message: str) -> None:
     QMessageBox.information(parent, "Info", message)
 
-    # --------- Entry Point --------- #
-    # --------- Entry Point --------- #
+    # ------------------ IMPORTS ------------------
+from PySide6.QtWidgets import (
+    QApplication, QSplashScreen, QLabel, QGraphicsDropShadowEffect
+)
+from PySide6.QtGui import QPalette, QColor, QPixmap, QFont
+from PySide6.QtCore import Qt, QPropertyAnimation, QTimer
+import sys
 
+# ------------------ SPLASH SCREEN CLASS ------------------
+class LuxeSplashScreen(QSplashScreen):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
+        self.label = QLabel(self)
+        self.label.setText("Luxe Market POS")
+        self.label.setFont(QFont("Georgia", 28, QFont.Bold))
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("""
+            QLabel {
+                color: white;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                                  stop:0 #2e3b62, stop:1 #6a89ff);
+                border-radius: 20px;
+                padding: 30px;
+            }
+        """)
+
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(25)
+        shadow.setOffset(0, 8)
+        shadow.setColor(QColor(0, 0, 0, 180))
+        self.label.setGraphicsEffect(shadow)
+
+        self.resize(500, 200)
+        self.label.resize(self.size())
+
+        self.opacity_anim = QPropertyAnimation(self, b"windowOpacity")
+        self.opacity_anim.setDuration(1000)
+        self.opacity_anim.setStartValue(0)
+        self.opacity_anim.setEndValue(1)
+        self.opacity_anim.start()
+
+    def show_and_fade(self, duration=2000, on_finish=None):
+        self.show()
+        QTimer.singleShot(duration, lambda: self.fade_out(on_finish))
+
+    def fade_out(self, on_finish=None):
+        self.opacity_anim = QPropertyAnimation(self, b"windowOpacity")
+        self.opacity_anim.setDuration(800)
+        self.opacity_anim.setStartValue(1)
+        self.opacity_anim.setEndValue(0)
+        self.opacity_anim.finished.connect(lambda: self._done(on_finish))
+        self.opacity_anim.start()
+
+    def _done(self, on_finish=None):
+        self.close()
+        if on_finish:
+            on_finish()
+
+# ------------------ MAIN FUNCTION ------------------
 def main() -> None:
     app = QApplication(sys.argv)
 
     # 🌈 Apply Fusion base + luxury palette with proper text contrast
     app.setStyle("Fusion")
     palette = app.palette()
-    palette.setColor(QPalette.Window, QColor("#f4f6fb"))           # Main background
-    palette.setColor(QPalette.Base, QColor("#ffffff"))             # Input / table cells
-    palette.setColor(QPalette.AlternateBase, QColor("#f2f4fa"))    # Table alternating rows
-    palette.setColor(QPalette.Text, QColor("#1a1a1a"))             # General text
-    palette.setColor(QPalette.WindowText, QColor("#1a1a1a"))       # Labels
-    palette.setColor(QPalette.Button, QColor("#4a6fff"))           # Buttons
-    palette.setColor(QPalette.ButtonText, QColor("#ffffff"))       # Button text
-    palette.setColor(QPalette.Highlight, QColor("#4a6fff"))        # Selection color
-    palette.setColor(QPalette.HighlightedText, QColor("#ffffff"))  # Selected text
-    palette.setColor(QPalette.ToolTipBase, QColor("#ffffff"))      # Tooltip background
-    palette.setColor(QPalette.ToolTipText, QColor("#1a1a1a"))      # Tooltip text
+    palette.setColor(QPalette.Window, QColor("#f4f6fb"))
+    palette.setColor(QPalette.Base, QColor("#ffffff"))
+    palette.setColor(QPalette.AlternateBase, QColor("#f2f4fa"))
+    palette.setColor(QPalette.Text, QColor("#1a1a1a"))
+    palette.setColor(QPalette.WindowText, QColor("#1a1a1a"))
+    palette.setColor(QPalette.Button, QColor("#4a6fff"))
+    palette.setColor(QPalette.ButtonText, QColor("#ffffff"))
+    palette.setColor(QPalette.Highlight, QColor("#4a6fff"))
+    palette.setColor(QPalette.HighlightedText, QColor("#ffffff"))
+    palette.setColor(QPalette.ToolTipBase, QColor("#ffffff"))
+    palette.setColor(QPalette.ToolTipText, QColor("#1a1a1a"))
     app.setPalette(palette)
 
-    # 🎨 Apply the premium stylesheet (glass-like aesthetic)
+    # 🎨 Apply your premium stylesheet (define this function somewhere above)
     apply_premium_style(app)
 
+    # 🗄️ Initialize the database
     db = Database()
-    window = MainWindow(db)
-    window.show()
+
+    # ✅ Keep MainWindow alive after showing
+    window_holder = {}
+
+    def show_main_window():
+        window_holder["window"] = MainWindow(db)
+        window_holder["window"].show()
+
+    # 🚀 Show splash screen, then show main window
+    splash = LuxeSplashScreen()
+    splash.show_and_fade(on_finish=show_main_window)
+
+    # 🧼 Start event loop
     sys.exit(app.exec())
 
-
+# ------------------ ENTRY POINT ------------------
 if __name__ == "__main__":
     main()

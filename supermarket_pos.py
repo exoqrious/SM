@@ -1342,28 +1342,7 @@ class BillingTab(QWidget):
                     ],
                 )
                 break
-    def _flash_cart_item(self, code: str):
-        """Flash added product row briefly to confirm scan success."""
-        for r in range(self.cart_table.rowCount()):
-            if self.cart_table.item(r, 0).text() == code:
-                original_color = self.cart_table.palette().color(QPalette.Base)
-                highlight = QColor("#c8ffc8")  # light green flash
-                for c in range(self.cart_table.columnCount()):
-                    item = self.cart_table.item(r, c)
-                    if item:
-                        item.setBackground(highlight)
-                QTimer.singleShot(
-                    500,
-                    lambda r=r: [
-                        self.cart_table.item(r, c).setBackground(original_color)
-                        for c in range(self.cart_table.columnCount())
-                        if self.cart_table.item(r, c)
-                    ],
-                )
-                break
 
-
-        # --- Real-Time Stock Banner Helpers ---
 
     def _show_status_banner(self, text: str, color: str):
         color_map = {
@@ -2013,6 +1992,8 @@ class DashboardTab(QWidget):
         header.setStyleSheet("font-size: 18px; font-weight: bold; color: #333;")
         header.setAlignment(Qt.AlignCenter)
         layout.addWidget(header)
+        layout.addSpacing(10)   # ✅ Adds breathing space below title
+
 
         filter_layout = QHBoxLayout()
         filter_layout.addWidget(QLabel("Trend Range:"))
@@ -2066,34 +2047,54 @@ class DashboardTab(QWidget):
             cat_totals[cat] = cat_totals.get(cat, 0) + qty
         ax2.pie(cat_totals.values(), labels=cat_totals.keys(), autopct="%1.1f%%", startangle=90)
         ax2.set_title("Stock Distribution by Category")
+        self.pie_canvas.fig.subplots_adjust(top=0.85)  # ✅ Gives space for title
         self.pie_canvas.draw()
 
-        # --- Chart 3: Sales Trend ---
+        # --- Chart 3: Sales vs Stock (Twin-Axis for Supermarkets) ---
         days = int(self.range_combo.currentText().split()[0])
         sales = self.db.get_sales_trend(days)
         stock = self.db.get_stock_trend(days)
 
         dates = [r["day"] for r in sales]
-        totals = [r["total"] for r in sales]
+        sales_values = [r["total"] for r in sales]
+        avg_stock = stock[0][1] if stock else 0
 
         self.trend_canvas.fig.clear()
-        ax3 = self.trend_canvas.fig.add_subplot(111)
-        if sales:
-            ax3.plot(dates, totals, marker="o", linestyle="-", color="royalblue", label="Sales Total (₹)")
-        if stock:
-            stock_date, avg_stock = stock[0]
-            ax3.axhline(y=avg_stock, color="limegreen", linestyle="--", label=f"Avg Stock ({avg_stock:.1f})")
+        fig = self.trend_canvas.fig
+        ax1 = fig.add_subplot(111)
 
-        ax3.set_title(f"Sales & Stock Trends (Last {days} Days)")
-        ax3.set_xlabel("Date")
-        ax3.set_ylabel("Value")
-        ax3.tick_params(axis='x', rotation=45)
-        ax3.legend()
+        # Left Y-axis → Sales
+        if sales:
+            ax1.plot(dates, sales_values, "o-", color="royalblue", label="Sales Total (₹)", linewidth=2)
+        ax1.set_xlabel("Date")
+        ax1.set_ylabel("Sales (₹)", color="royalblue")
+        ax1.tick_params(axis="y", labelcolor="royalblue")
+        ax1.set_ylim(bottom=0)   # ✅ Prevents squashed chart when sales > 10k
+
+
+        # Right Y-axis → Stock
+        ax2 = ax1.twinx()
+        ax2.plot(dates, [avg_stock]*len(dates), "--", color="seagreen", label=f"Avg Stock ({avg_stock:.1f})", linewidth=1.8)
+        ax2.set_ylabel("Stock (Qty)", color="seagreen")
+        ax2.tick_params(axis="y", labelcolor="seagreen")
+
+        # Titles and legend
+        fig.suptitle(f"Sales & Stock Trends (Last {days} Days)", fontsize=12, fontweight="bold")
+        lines, labels = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines + lines2, labels + labels2, loc="upper left")
+
+        fig.autofmt_xdate(rotation=45)
+        fig.tight_layout(rect=[0, 0, 1, 0.95])   # ✅ Prevents legend cutoff
         self.trend_canvas.draw()
-        # --- PATCH START: X-axis spacing ---
+
+
+
+        # --- PATCH START: X-axis spacing (fixed) ---
         import matplotlib.ticker
-        ax3.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(8))
+        ax1.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(8))
         # --- PATCH END ---
+
 
 
 # --- PATCH START: AI Insights Tab (Enhanced with Forecast Chart) ---

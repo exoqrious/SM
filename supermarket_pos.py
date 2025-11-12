@@ -1,5 +1,3 @@
-# supermarket_pos.py
-
 import sys
 from typing import Optional, List
 import sqlite3
@@ -2466,8 +2464,9 @@ class LuxeSplashScreen(QSplashScreen):
         shadow.setColor(QColor(0, 0, 0, 180))
         self.label.setGraphicsEffect(shadow)
 
-        self.resize(500, 200)
-        self.label.resize(self.size())
+        screen = QApplication.primaryScreen().geometry()
+        self.setGeometry(screen)
+        self.label.setGeometry(self.rect())
 
         self.opacity_anim = QPropertyAnimation(self, b"windowOpacity")
         self.opacity_anim.setDuration(1000)
@@ -2523,7 +2522,7 @@ def main() -> None:
 
     def show_main_window():
         window_holder["window"] = MainWindow(db)
-        window_holder["window"].show()
+        window_holder["window"].showMaximized()
 
     # 🚀 Show splash screen, then show main window
     splash = LuxeSplashScreen()

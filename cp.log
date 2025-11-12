@@ -6,5 +6,5 @@ DEBUG: file: None
 DEBUG: pause: True
 DEBUG: repl: python
 DEBUG: args: ['C:\\Users\\ashis\\OneDrive\\Desktop\\SM\\supermarket_pos.py']
-INFO: return code: 0 (0x0)
-INFO: elapsed time: 16.641658
+INFO: return code: 3221225786 (0xc000013a)
+INFO: elapsed time: 45.752340
